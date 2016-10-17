@@ -1,0 +1,6 @@
+return {
+  default = {
+    lpath = "./lib/?.lua;./lib/?/init.lua;"
+  }
+}
+
