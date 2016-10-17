@@ -74,7 +74,6 @@ describe("unserialize()", function()
     local res = assert(multipart.unserialize(body, boundary))
 
     local part1 = res[1]
-
     assert.equal(part1.headers["Content-Disposition"], part1.headers["content-disposition"])
   end)
 end)
