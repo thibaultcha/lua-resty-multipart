@@ -6,6 +6,7 @@ end
 local setmetatable = setmetatable
 local concat = table.concat
 local rawget = rawget
+local pairs = pairs
 local type = type
 local match = string.match
 local re_match = ngx.re.match
@@ -97,7 +98,7 @@ end
 -- @section serializers
 
 local function unserialize(body, boundary)
-  local parts, err = split(body, '--'..boundary)
+  local parts, err = split(body, '--' .. boundary)
   if err then return nil, err end
 
   if parts[#parts] ~= '--' then
@@ -146,7 +147,7 @@ local function serialize(parts, boundary)
     for j = 1, #part.headers do
       buf[#buf+1] = part.headers[j]
     end
-    buf[#buf+1] = ''
+    buf[#buf+1] = '' -- <headers>\n<body>
     buf[#buf+1] = part.value
   end
 
@@ -154,9 +155,6 @@ local function serialize(parts, boundary)
 
   return concat(buf, '\n')
 end
-
-_M.unserialize = unserialize
-_M.serialize = serialize
 
 --- Multipart helper
 -- @section multipart_helper
@@ -181,7 +179,7 @@ function _M.new(body, boundary, content_type)
 
   local self = {
     body = body,
-    data = nil,
+    --data = nil,
     boundary = boundary
   }
 
@@ -244,7 +242,7 @@ function _mt:add(name, headers_t, value)
   if not self.data then
     if self.body and self.boundary then
       local ok, err = self:decode()
-      if not ok then return nil, 'could not decode given body: '..err end
+      if not ok then return nil, 'could not decode given body: ' .. err end
     else
       self.data = {}
     end
@@ -292,5 +290,8 @@ function _mt:__tostring()
   if not str then error(err) end
   return str
 end
+
+_M.unserialize = unserialize
+_M.serialize = serialize
 
 return _M
