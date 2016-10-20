@@ -168,7 +168,7 @@ function _M.serialize(parts, boundary)
 
   buf[#buf+1] = boundary .. '--'
 
-  return concat(buf, '\n')
+  return concat(buf, '\n') -- todo: \r\n
 end
 
 --- Multipart helper
