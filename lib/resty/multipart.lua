@@ -1,6 +1,6 @@
 if not ngx
    or not ngx.config.nginx_configure():find('--with-pcre-jit', nil, true) then
-   error('lua-resty-multipart requires ngx_lua with JIT PCRE support')
+  error('lua-resty-multipart requires ngx_lua with JIT PCRE support')
 end
 
 local setmetatable = setmetatable
@@ -13,6 +13,15 @@ local re_find = ngx.re.find
 local lower = string.lower
 local fmt = string.format
 local sub = string.sub
+local new_tab
+
+do
+  local ok
+  ok, new_tab = pcall(require, 'table.new')
+  if not ok or type(new_tab) ~= 'function' then
+    new_tab = function(narr, nrec) return {} end
+  end
+end
 
 local _cd = 'content-disposition'
 
@@ -59,7 +68,7 @@ local function parse_part_headers(part_headers)
   if err then return nil, nil, err end
 
   local name
-  local t = {}
+  local t = new_tab(#headers_t, #headers_t)
 
   for i = 1, #headers_t do
     local header = trim(headers_t[i])
@@ -97,7 +106,7 @@ local function unserialize(body, boundary)
     parts[#parts] = nil
   end
 
-  local res = {}
+  local res = new_tab(#parts, #parts)
 
   for i = 1, #parts do
     local part = trim(parts[i])
@@ -127,8 +136,8 @@ local function unserialize(body, boundary)
 end
 
 local function serialize(parts, boundary)
-  boundary = '--'..boundary
-  local buf = {}
+  boundary = '--' .. boundary
+  local buf = new_tab(#parts*4, 0) -- (boundary + [headers] + line jump + part)
 
   for i = 1, #parts do
     local part = parts[i]
@@ -209,7 +218,7 @@ function _mt:encode(boundary)
 end
 
 function _mt:add(name, headers_t, value)
-  headers_t = headers_t or {}
+  headers_t = headers_t or new_tab(1, 1)
   setmetatable(headers_t, headers_mt)
 
   if not headers_t['Content-Disposition'] then
@@ -266,10 +275,15 @@ end
 function _mt:__index(key)
   if _mt[key] ~= nil then
     return _mt[key]
-  elseif type(key) == 'number' and self.data then
-    return self.data[key]
-  elseif sub(key, 1, 5) == 'part_' and self.data then
-    return self.data[sub(key, 6, #key)]
+  end
+
+  local data = rawget(self, 'data')
+  if data then
+    if type(key) == 'number' then
+      return data[key]
+    elseif sub(key, 1, 5) == 'part_' then
+      return data[sub(key, 6, #key)]
+    end
   end
 end
 
