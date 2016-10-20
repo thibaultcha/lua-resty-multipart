@@ -110,7 +110,7 @@ describe("multipart helper", function()
       end, "content_type must be a string", nil, true)
     end)
 
-    it("retrieves the boundary from content_type", function()
+    it("retrieves the boundary from content-type", function()
       local content_type = string.format(u[[
         Content-Type: multipart/form-data; boundary=%s
       ]], boundary)
@@ -118,21 +118,34 @@ describe("multipart helper", function()
       assert.equal(boundary, m.boundary)
     end)
 
+    it("errors if cannot retrieve boundary from content-type", function()
+      assert.error_matches(function()
+        assert(multipart.new(body, nil, "foobar"))
+      end, "could not retrieve boundary from content_type", nil, true)
+    end)
+
     it("ignores retrieving the boundary if content_type is nil", function()
       assert.has_no_error(multipart.new, body)
     end)
 
-    it("uses the given boundary over content_type", function()
+    it("uses the given boundary over content-type", function()
       local content_type = string.format(u[[
         Content-Type: multipart/form-data; boundary=%s
       ]], boundary)
       local m = assert(multipart.new(body, "boundary", content_type))
       assert.equal("boundary", m.boundary)
     end)
+
+    it("is lazy (no decoding unless asked)", function()
+      spy.on(multipart, "unserialize")
+      assert(multipart.new(body, "boundary"))
+
+      assert.spy(multipart.unserialize).was_not_called()
+    end)
   end)
 
   describe("decode()", function()
-    it("decodes the given body", function()
+    it("decodes the given body if not previously decoded", function()
       local m = assert(multipart.new(body, boundary))
       local res = assert(m:decode())
       local expected = assert(multipart.unserialize(body, boundary))
@@ -158,31 +171,15 @@ describe("multipart helper", function()
         assert(m:decode())
       end, "missing boundary", nil, true)
     end)
-  end)
 
-  describe("encode()", function()
-    it("encodes 'data' field", function()
+    it("does not re-decode once already decoded", function()
+      spy.on(multipart, "unserialize")
+
       local m = assert(multipart.new(body, boundary))
-      assert(m:decode()) -- TODO shouldn't be necessary (no changes made)
-      assert.equal(body, m:encode())
-    end)
+      assert(m:decode())
+      assert(m:decode())
 
-    it("accepts another boundary", function()
-      local m = assert(multipart.new(body, boundary))
-
-      assert(m:decode()) -- TODO: should not be needed
-
-      local res = assert(m:encode("---my_boundary"))
-
-      assert.matches("---my_boundary", res, nil, true)
-      assert.not_matches(boundary, res, nil, true)
-    end)
-
-    it("errors when no 'data' field", function()
-      local m = assert(multipart.new(body, boundary))
-      assert.error_matches(function()
-        assert(m:encode())
-      end, "no data to encode", nil, true)
+      assert.spy(multipart.unserialize).was_called(1)
     end)
   end)
 
@@ -211,7 +208,7 @@ describe("multipart helper", function()
       local m = assert(multipart.new())
       m:add("my_part", nil, "hello world")
 
-      local res = assert(m:encode(boundary))
+      local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
         -----------------------------735323031399963166993862150
         Content-Disposition: form-data; name="my_part"
@@ -225,7 +222,7 @@ describe("multipart helper", function()
       local m = assert(multipart.new())
       m:add("my_part", {["Content-Type"] = "text/plain"}, "hello world")
 
-      local res = assert(m:encode(boundary))
+      local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
         -----------------------------735323031399963166993862150
         Content-Disposition: form-data; name="my_part"
@@ -244,7 +241,7 @@ describe("multipart helper", function()
 
       }, "contents of file")
 
-      local res = assert(m:encode(boundary))
+      local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
         -----------------------------735323031399963166993862150
         Content-Disposition: form-data; name="my_file"; filename="my_file"
@@ -263,7 +260,7 @@ describe("multipart helper", function()
 
       }, "contents of file 2")
 
-      local res = assert(m:encode(boundary))
+      local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
         -----------------------------735323031399963166993862150
         Content-Disposition: form-data; name="my_file_2"; filename="my_file_2"
@@ -278,7 +275,7 @@ describe("multipart helper", function()
       local m = assert(multipart.new(body, boundary))
       assert(m:add("my_part", {["Content-Type"] = "text/plain"}, "hello world"))
 
-      local res = assert(m:encode(boundary))
+      local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
         -----------------------------735323031399963166993862150
         Content-Disposition: form-data; name="text1"
@@ -312,6 +309,27 @@ describe("multipart helper", function()
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
+
+    it("is possible to append multiple times", function()
+      local m = assert(multipart.new())
+      m:add("my_part", {["Content-Type"] = "text/plain"}, "hello world")
+      m:add("my_part_2", {["Content-Type"] = "text/plain"}, "hello world again")
+
+      local res = assert(multipart.serialize(m.data, boundary))
+      assert.equal(u[[
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="my_part"
+        Content-Type: text/plain
+
+        hello world
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="my_part_2"
+        Content-Type: text/plain
+
+        hello world again
+        -----------------------------735323031399963166993862150--
+      ]], res)
+    end)
   end)
 
   describe("remove()", function()
@@ -327,14 +345,6 @@ describe("multipart helper", function()
       end, "name must be a string", nil, true)
     end)
 
-    it("body needs to be decoded", function()
-      local m = assert(multipart.new(body, boundary))
-
-      assert.error_matches(function()
-        assert(m:remove("name"))
-      end, "body must be decoded", nil, true)
-    end)
-
     it("removes a part", function()
       local m = assert(multipart.new(body, boundary))
       assert(m:decode())
@@ -342,6 +352,106 @@ describe("multipart helper", function()
 
       assert(m:remove("text1"))
       assert.is_nil(m.part_text1)
+
+      local res = assert(multipart.serialize(m.data, boundary))
+      assert.equal(u[[
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="text2"
+
+        aωb
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="file1"; filename="a.txt"
+        Content-Type: text/plain
+
+        Content of a.txt.
+        hello
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="file2"; filename="a.html"
+        Content-Type: text/html
+
+        <!DOCTYPE html><title>Content of a.html.</title>
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="file3"; filename="binary"
+        Content-Type: application/octet-stream
+
+        aωb
+        -----------------------------735323031399963166993862150--
+      ]], res)
+    end)
+
+    it("calls decode() if needed and possible", function()
+      spy.on(multipart, "unserialize")
+
+      local m = assert(multipart.new(body, boundary))
+      assert(m:remove("text1"))
+      assert.spy(multipart.unserialize).was_called(1)
+    end)
+
+    it("removes multiple parts", function()
+      local m = assert(multipart.new(body, boundary))
+      assert(m:decode())
+      assert(m:remove("text1"))
+      assert(m:remove("file2"))
+
+      local res = assert(multipart.serialize(m.data, boundary))
+      assert.equal(u[[
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="text2"
+
+        aωb
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="file1"; filename="a.txt"
+        Content-Type: text/plain
+
+        Content of a.txt.
+        hello
+        -----------------------------735323031399963166993862150
+        Content-Disposition: form-data; name="file3"; filename="binary"
+        Content-Type: application/octet-stream
+
+        aωb
+        -----------------------------735323031399963166993862150--
+      ]], res)
+    end)
+  end)
+
+  describe("encode()", function()
+    it("returns given body if no modifications", function()
+      spy.on(multipart, "serialize")
+
+      local m = assert(multipart.new(body, boundary))
+      assert.equal(body, m:encode())
+      assert.spy(multipart.serialize).was_not_called()
+    end)
+
+    describe("re-encode body if modifications only", function()
+      it("with add()", function()
+        spy.on(multipart, "serialize")
+
+        local m = assert(multipart.new(body, boundary))
+        assert(m:encode())
+        assert.spy(multipart.serialize).was_not_called()
+
+        assert(m:add("my_part", {["Content-Type"] = "text/plain"}, "hello world"))
+        assert(m:encode())
+        assert.spy(multipart.serialize).was_called(1)
+        assert(m:encode())
+        assert.spy(multipart.serialize).was_called(1)
+      end)
+
+      it("with remove()", function()
+        spy.on(multipart, "serialize")
+
+        local m = assert(multipart.new(body, boundary))
+        assert(m:encode())
+        assert.spy(multipart.serialize).was_not_called()
+
+        assert(m:remove("text1"))
+        assert(m:encode())
+        assert.spy(multipart.serialize).was_called(1)
+        assert(m:encode())
+        assert.spy(multipart.serialize).was_called(1)
+      end)
     end)
   end)
 
