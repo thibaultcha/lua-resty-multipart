@@ -1,3 +1,8 @@
+if not ngx
+   or not ngx.config.nginx_configure():find('--with-pcre-jit', nil, true) then
+   error('lua-resty-multipart requires ngx_lua with JIT PCRE support')
+end
+
 local setmetatable = setmetatable
 local concat = table.concat
 local rawget = rawget
