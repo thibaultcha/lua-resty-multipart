@@ -1,4 +1,4 @@
-.PHONY: test
+.PHONY: test lint
 
 test:
 	@./rbusted
@@ -8,4 +8,3 @@ lint:
 		--std 'ngx_lua+busted' \
 		--no-unused-args \
 		--no-redefined
-
