@@ -1,5 +1,8 @@
 # lua-resty-multipart
 
+![Module Version][badge-version-image]
+[![Build Status][badge-travis-image]][badge-travis-url]
+
 multipart/form-data MIME type parser optimized for
 [OpenResty](https://openresty.org) with JIT PCRE.
 
@@ -80,3 +83,8 @@ TODO
 Work licensed under the MIT License.
 
 [Back to TOC](#table-of-contents)
+
+[badge-travis-url]: https://travis-ci.org/thibaultcha/lua-resty-multipart
+[badge-travis-image]: https://travis-ci.org/thibaultcha/lua-resty-multipart.svg?branch=master
+
+[badge-version-image]: https://img.shields.io/badge/version-0.0.1-blue.svg?style=flat
