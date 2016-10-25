@@ -38,25 +38,30 @@ local function trim(s)
   return s:gsub('^%s+', ''):reverse():gsub('^%s+', ''):reverse()
 end
 
-local function split(s, token)
-  local t = {}
+local function split(subj, regex)
+  local res = new_tab(1, 0)
+  local ctx = new_tab(0, 1)
+  ctx.pos = 1
+
+  local sub_idx = ctx.pos
+  local res_idx = 1
 
   while true do
-    local from, to, err = re_find(s, token, 'oj')
-    if err then return nil, err
-    elseif not from and not to then break end
+    local from, to, err = re_find(subj, regex, 'oj', ctx)
+    if err then return nil, err end
 
-    local part = sub(s, 1, from-1)
-    if part ~= '' then
-      t[#t+1] = part
+    if not from then
+      res[res_idx] = sub(subj, sub_idx, #subj)
+      break
     end
 
-    s = sub(s, to+1, #s)
+    local s = sub(subj, sub_idx, from - 1)
+    res[res_idx] = s
+    res_idx = res_idx + 1
+    sub_idx = to + 1
   end
 
-  t[#t+1] = s
-
-  return t
+  return res
 end
 
 local headers_mt = {
@@ -70,7 +75,7 @@ local headers_mt = {
 
 do
   local function parse_part_headers(part_headers)
-    local headers_t, err = split(trim(part_headers), '\\n')
+    local headers_t, err = split(part_headers, '\\n')
     if err then return nil, nil, err end
 
     local name
@@ -79,21 +84,25 @@ do
     for i = 1, #headers_t do
       local header = trim(headers_t[i])
 
-      if lower(sub(header, 1, #_cd)) == _cd then
-        local m, err = re_match(header, 'name="(.*?)"', 'oj')
-        if err then return nil, nil, err
-        elseif not m then return nil, nil, 'could not parse part name' end
-        name = m[1]
-      end
+      if header ~= '' then
+        if lower(sub(header, 1, #_cd)) == _cd then
+          local m, err = re_match(header, 'name="(.*?)"', 'oj')
+          if err then return nil, nil, err end
 
-      local m, err = re_match(header, '(.*?):\\s*(.*)', 'oj')
-      if err then return nil, nil, err
-      elseif not m or not m[1] or not m[2] then
-        return nil, nil, 'could not parse header field'
-      end
+          if not m then return nil, nil, 'could not parse part name' end
+          name = m[1]
+        end
 
-      t[#t+1] = header
-      t[lower(m[1])] = m[2]
+        local m, err = re_match(header, '(.*?):\\s*(.*)', 'oj')
+        if err then return nil, nil, err end
+
+        if not m or not m[1] or not m[2] then
+          return nil, nil, 'could not parse header field'
+        end
+
+        t[#t+1] = header
+        t[lower(m[1])] = m[2]
+      end
     end
 
     return name, t
@@ -109,36 +118,35 @@ do
     local parts, err = split(body, '--' .. boundary)
     if err then return nil, err end
 
-    if parts[#parts] ~= '--' then
-      return nil, 'bad format'
-    else
-      parts[#parts] = nil
-    end
-
     local res = new_tab(#parts, #parts)
 
     for i = 1, #parts do
       local part = trim(parts[i])
 
-      local from, to, err = re_find(part, '^\\s*$', 'ojm')
-      if err then return nil, err
-      elseif not from and not to then return nil, 'could not find part body' end
+      if part ~= '' and part ~= '--' then
+        local from, to, err = re_find(part, '^\\r$', 'ojm')
+        if err then return nil, err end
 
-      local part_headers = sub(part, 1, from-1)
-      local part_body = sub(part, to+2, #part) -- +2: trim leading line jump
+        if not from and not to then return nil, 'could not find part body' end
 
-      local name, headers, err = parse_part_headers(part_headers)
-      if err then return nil, err end
+        local part_headers = sub(part, 1, from - 1)
+        local part_body = sub(part, to + 2, #part) -- +2: trim leading line jump
 
-      local res_part = {
-        name = name,
-        idx = i,
-        headers = setmetatable(headers, headers_mt),
-        value = part_body
-      }
+        local name, headers, err = parse_part_headers(part_headers)
+        if err then return nil, err end
 
-      res[name] = res_part
-      res[i] = res_part
+        local idx = #res + 1
+
+        local res_part = {
+          name = name,
+          idx = idx,
+          headers = setmetatable(headers, headers_mt),
+          value = part_body
+        }
+
+        res[idx] = res_part
+        res[name] = res_part
+      end
     end
 
     return res
@@ -153,22 +161,24 @@ function _M.serialize(parts, boundary)
   end
 
   boundary = '--' .. boundary
-  local buf = new_tab(#parts*4, 0) -- (boundary + [headers] + line jump + part)
+  local buf = new_tab(#parts * 4, 0) -- (boundary + [headers] + line jump + part)
+  local n = 1
 
   for i = 1, #parts do
     local part = parts[i]
-
-    buf[#buf+1] = boundary
+    buf[n] = boundary
     for j = 1, #part.headers do
-      buf[#buf+1] = part.headers[j]
+      n = n + 1
+      buf[n] = part.headers[j]
     end
-    buf[#buf+1] = '' -- <headers>\n<body>
-    buf[#buf+1] = part.value
+    buf[n+1] = '' -- <headers>\n<body>
+    buf[n+2] = part.value
+    n = n + 3
   end
 
-  buf[#buf+1] = boundary .. '--'
+  buf[n] = boundary .. '--'
 
-  return concat(buf, '\n') -- todo: \r\n
+  return concat(buf, '\r\n')
 end
 
 --- Multipart helper

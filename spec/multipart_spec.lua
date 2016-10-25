@@ -11,35 +11,35 @@ local function u(str)
       prefix = pref
     end
   end
-  return (str:gsub("\n" .. prefix, "\n"):gsub("\n$", ""))
+  return (str:gsub("\n" .. prefix, "\n"):gsub("\n$", "")):gsub("\\r", "\r")
 end
 
 local boundary = "---------------------------735323031399963166993862150"
 local body = u[[
-  -----------------------------735323031399963166993862150
-  Content-Disposition: form-data; name="text1"
-
-  text default
-  -----------------------------735323031399963166993862150
-  Content-Disposition: form-data; name="text2"
-
-  aωb
-  -----------------------------735323031399963166993862150
-  Content-Disposition: form-data; name="file1"; filename="a.txt"
-  Content-Type: text/plain
-
-  Content of a.txt.
-  hello
-  -----------------------------735323031399963166993862150
-  Content-Disposition: form-data; name="file2"; filename="a.html"
-  Content-Type: text/html
-
-  <!DOCTYPE html><title>Content of a.html.</title>
-  -----------------------------735323031399963166993862150
-  Content-Disposition: form-data; name="file3"; filename="binary"
-  Content-Type: application/octet-stream
-
-  aωb
+  -----------------------------735323031399963166993862150\r
+  Content-Disposition: form-data; name="text1"\r
+  \r
+  text default\r
+  -----------------------------735323031399963166993862150\r
+  Content-Disposition: form-data; name="text2"\r
+  \r
+  aωb\r
+  -----------------------------735323031399963166993862150\r
+  Content-Disposition: form-data; name="file1"; filename="a.txt"\r
+  Content-Type: text/plain\r
+  \r
+  Content of a.txt.\r
+  hello\r
+  -----------------------------735323031399963166993862150\r
+  Content-Disposition: form-data; name="file2"; filename="a.html"\r
+  Content-Type: text/html\r
+  \r
+  <!DOCTYPE html><title>Content of a.html.</title>\r
+  -----------------------------735323031399963166993862150\r
+  Content-Disposition: form-data; name="file3"; filename="binary"\r
+  Content-Type: application/octet-stream\r
+  \r
+  aωb\r
   -----------------------------735323031399963166993862150--
 ]]
 
@@ -62,7 +62,7 @@ describe("unserialize()", function()
       ["content-disposition"] = 'form-data; name="file1"; filename="a.txt"',
       ["content-type"] = "text/plain"
     }, res[3].headers)
-    assert.equal("Content of a.txt.\nhello", res[3].value)
+    assert.equal("Content of a.txt.\r\nhello", res[3].value)
   end)
 
   it("aliases by name and part index", function()
@@ -210,10 +210,10 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_part"
-
-        hello world
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_part"\r
+        \r
+        hello world\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -224,11 +224,11 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_part"
-        Content-Type: text/plain
-
-        hello world
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_part"\r
+        Content-Type: text/plain\r
+        \r
+        hello world\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -243,11 +243,11 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_file"; filename="my_file"
-        Content-Type: text/plain
-
-        contents of file
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_file"; filename="my_file"\r
+        Content-Type: text/plain\r
+        \r
+        contents of file\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -262,11 +262,11 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_file_2"; filename="my_file_2"
-        Content-Type: text/plain
-
-        contents of file 2
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_file_2"; filename="my_file_2"\r
+        Content-Type: text/plain\r
+        \r
+        contents of file 2\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -277,35 +277,35 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="text1"
-
-        text default
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="text2"
-
-        aωb
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file1"; filename="a.txt"
-        Content-Type: text/plain
-
-        Content of a.txt.
-        hello
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file2"; filename="a.html"
-        Content-Type: text/html
-
-        <!DOCTYPE html><title>Content of a.html.</title>
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file3"; filename="binary"
-        Content-Type: application/octet-stream
-
-        aωb
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_part"
-        Content-Type: text/plain
-
-        hello world
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="text1"\r
+        \r
+        text default\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="text2"\r
+        \r
+        aωb\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file1"; filename="a.txt"\r
+        Content-Type: text/plain\r
+        \r
+        Content of a.txt.\r
+        hello\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file2"; filename="a.html"\r
+        Content-Type: text/html\r
+        \r
+        <!DOCTYPE html><title>Content of a.html.</title>\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file3"; filename="binary"\r
+        Content-Type: application/octet-stream\r
+        \r
+        aωb\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_part"\r
+        Content-Type: text/plain\r
+        \r
+        hello world\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -317,16 +317,16 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_part"
-        Content-Type: text/plain
-
-        hello world
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="my_part_2"
-        Content-Type: text/plain
-
-        hello world again
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_part"\r
+        Content-Type: text/plain\r
+        \r
+        hello world\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="my_part_2"\r
+        Content-Type: text/plain\r
+        \r
+        hello world again\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -355,26 +355,26 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="text2"
-
-        aωb
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file1"; filename="a.txt"
-        Content-Type: text/plain
-
-        Content of a.txt.
-        hello
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file2"; filename="a.html"
-        Content-Type: text/html
-
-        <!DOCTYPE html><title>Content of a.html.</title>
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file3"; filename="binary"
-        Content-Type: application/octet-stream
-
-        aωb
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="text2"\r
+        \r
+        aωb\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file1"; filename="a.txt"\r
+        Content-Type: text/plain\r
+        \r
+        Content of a.txt.\r
+        hello\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file2"; filename="a.html"\r
+        Content-Type: text/html\r
+        \r
+        <!DOCTYPE html><title>Content of a.html.</title>\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file3"; filename="binary"\r
+        Content-Type: application/octet-stream\r
+        \r
+        aωb\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
@@ -395,21 +395,21 @@ describe("multipart helper", function()
 
       local res = assert(multipart.serialize(m.data, boundary))
       assert.equal(u[[
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="text2"
-
-        aωb
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file1"; filename="a.txt"
-        Content-Type: text/plain
-
-        Content of a.txt.
-        hello
-        -----------------------------735323031399963166993862150
-        Content-Disposition: form-data; name="file3"; filename="binary"
-        Content-Type: application/octet-stream
-
-        aωb
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="text2"\r
+        \r
+        aωb\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file1"; filename="a.txt"\r
+        Content-Type: text/plain\r
+        \r
+        Content of a.txt.\r
+        hello\r
+        -----------------------------735323031399963166993862150\r
+        Content-Disposition: form-data; name="file3"; filename="binary"\r
+        Content-Type: application/octet-stream\r
+        \r
+        aωb\r
         -----------------------------735323031399963166993862150--
       ]], res)
     end)
