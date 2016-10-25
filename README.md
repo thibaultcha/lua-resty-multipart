@@ -15,10 +15,17 @@ module for downstream/upstream streamed parsing.
 
 ### Table of Contents
 
+* [Motivation](#motivation)
 * [Usage](#usage)
 * [Installation](#installation)
 * [Documentation](#documentation)
 * [License](#license)
+
+### Motivation
+
+TODO
+
+[Back to TOC](#table-of-contents)
 
 ### Usage
 
