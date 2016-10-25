@@ -40,18 +40,18 @@ for i, part in ipairs(res) do
 end
 
 -- encoding
-local body = assert(multipart.serialize(
-{
-  name = 'part1',
-  headers = {['Content-Disposition'] = 'form-data; name="part1"'},
-  value = 'hello world'
-},
-{
-  name = 'part2',
-  headers = {['Content-Disposition'] = 'form-data; name="part2"'},
-  value = 'foo'
-}
-), '------boundary')
+local body = assert(multipart.serialize({
+  {
+    name = 'part1',
+    headers = {['Content-Disposition'] = 'form-data; name="part1"'},
+    value = 'hello world'
+  },
+  {
+    name = 'part2',
+    headers = {['Content-Disposition'] = 'form-data; name="part2"'},
+    value = 'foo'
+  }
+}), '------boundary')
 ```
 
 Multipart helper:
